@@ -53,6 +53,7 @@ sam::core::artifact::handle() {
 
     if sam::core::archive::can_extract "${artifact_path}"; then
         sam::core::archive::extract "${artifact_path}" "${tmp_destination}"
+        # TODO move to /usr/local/bin?
         rm "${artifact_path}"
     elif [[ "${extension}" == 'deb' ]]; then
         sam::processor::dpkg::install "${artifact_path}"
@@ -68,6 +69,5 @@ sam::core::artifact::handle() {
 
     # the artifact was handled and now the local version is equal to upstream version
     sam::core::database::set_local_version ${SAN_CURRENT_ARTIFACT['UPSTREAM_VERSION']}
-
     sam::core::database::save
 }
