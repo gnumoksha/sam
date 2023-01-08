@@ -57,6 +57,9 @@ sam::core::artifact::handle() {
     elif [[ "${extension}" == 'deb' ]]; then
         sam::processor::dpkg::install "${artifact_path}"
         rm "${artifact_path}"
+    elif [[ "${extension}" == 'rpm' ]]; then
+        sam::processor::rpm::install "${artifact_path}"
+        rm "${artifact_path}"
     else
         mv "${artifact_path}" "$tmp_destination"
     fi

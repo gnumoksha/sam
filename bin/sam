@@ -289,6 +289,26 @@ sam::processor::dpkg::install() {
     sudo dpkg --install "${file}"
 }
 
+# Source: ./processor/rpm.sh
+#
+# rpm processor
+#
+
+#######################################
+# Install the specified rpm file.
+# Globals:
+#   None
+# Arguments:
+#   file path
+# Returns:
+#   None
+#######################################
+sam::processor::rpm::install() {
+    local file=${1:-}
+    sam::core::logger::info "Installing $file"
+    sudo rpm --install "${file}"
+}
+
 # Source: ./processor/font.sh
 #
 # Process fonts.
@@ -402,6 +422,9 @@ sam::core::artifact::handle() {
         rm "${artifact_path}"
     elif [[ "${extension}" == 'deb' ]]; then
         sam::processor::dpkg::install "${artifact_path}"
+        rm "${artifact_path}"
+    elif [[ "${extension}" == 'rpm' ]]; then
+        sam::processor::rpm::install "${artifact_path}"
         rm "${artifact_path}"
     else
         mv "${artifact_path}" "$tmp_destination"
