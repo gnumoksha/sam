@@ -130,7 +130,32 @@ sam::core::archive::extract() {
 	destination=$(dirname ${destination})
 
 	if [[ ${extension} == 'zip' ]]; then
-		extract_zip "$filename" "$destination"
+		sam::core::archive::extract_zip "$filename" "$destination"
+		return
+	fi
+
+	if [[ ${filename} =~ .*tar\.gz$ ]]; then
+		sam::core::archive::extract_tar "$filename" "$destination"
+		return
+	fi
+
+	if [[ ${extension} == 'tgz' ]]; then
+		sam::core::archive::extract_tar "$filename" "$destination"
+		return
+	fi
+
+	if [[ ${extension} == 'tar' ]]; then
+		sam::core::archive::extract_tar "$filename" "$destination"
+		return
+	fi
+
+	if [[ ${extension} == 'xz' ]]; then
+		sam::core::archive::extract_tar "$filename" "$destination"
+		return
+	fi
+
+	if [[ ${extension} == 'gz' ]]; then
+		sam::core::archive::extract_gzip "$filename" "$destination"
 		return
 	fi
 
@@ -141,6 +166,21 @@ sam::core::archive::extract_zip() {
 	local filename=${1:-}
 	local destination=${2:-}
 	unzip -o -q "$filename" -d "$destination"
+}
+
+sam::core::archive::extract_tar() {
+	local filename=${1:-}
+	local destination=${2:-}
+	tar --extract --file "$filename" --directory "$destination"
+}
+
+sam::core::archive::extract_gzip() {
+	local filename=${1:-}
+	local destination=${2:-}
+
+	pushd "$destination" 2>/dev/null
+	gunzip "$filename"
+	popd "$destination" 2>/dev/null
 }
 
 # Source: ./core/http.sh
@@ -289,6 +329,8 @@ sam::processor::dpkg::install() {
     sudo dpkg --install "${file}"
 }
 
+# Source: ./processor/font.sh
+
 # Source: ./processor/rpm.sh
 #
 # rpm processor
@@ -309,59 +351,26 @@ sam::processor::rpm::install() {
     sudo rpm --install "${file}"
 }
 
-# Source: ./processor/font.sh
+# Source: ./processor/tar.sh
 #
-# Process fonts.
+# tar processor
 #
 
-DESTINATION_PATH=${XDG_DATA_HOME:=${HOME}/.local/share}/fonts/sam
-
-URLS=(
-'https://github.com/ryanoasis/nerd-fonts/releases/download/v2.0.0/Hack.zip'
-'https://github.com/ryanoasis/nerd-fonts/releases/download/v2.0.0/DejaVuSansMono.zip'
-'https://github.com/ryanoasis/nerd-fonts/releases/download/v2.0.0/DroidSansMono.zip'
-'https://github.com/ryanoasis/nerd-fonts/releases/download/v2.0.0/FiraCode.zip'
-'https://github.com/ryanoasis/nerd-fonts/releases/download/v2.0.0/FiraMono.zip'
-'https://github.com/ryanoasis/nerd-fonts/releases/download/v2.0.0/Inconsolata.zip'
-'https://github.com/ryanoasis/nerd-fonts/releases/download/v2.0.0/Ubuntu.zip'
-'https://github.com/ryanoasis/nerd-fonts/releases/download/v2.0.0/UbuntuMono.zip'
-'https://github.com/ryanoasis/nerd-fonts/releases/download/v2.0.0/SourceCodePro.zip'
-'https://github.com/adobe-fonts/source-code-pro/releases/download/variable-fonts/SourceCodeVariable-Italic.otf'
-'https://github.com/adobe-fonts/source-code-pro/releases/download/variable-fonts/SourceCodeVariable-Italic.ttf'
-'https://github.com/adobe-fonts/source-code-pro/releases/download/variable-fonts/SourceCodeVariable-Roman.otf'
-'https://github.com/adobe-fonts/source-code-pro/releases/download/variable-fonts/SourceCodeVariable-Roman.ttf'
-'https://github.com/powerline/fonts/raw/master/DroidSansMonoSlashed/Droid%20Sans%20Mono%20Slashed%20for%20Powerline.ttf'
-)
-
-font_download() {
-	if [[ ! -d "$DESTINATION_PATH" ]]; then
-		mkdir "$DESTINATION_PATH"
-	fi
-
-	for url in "${URLS[@]}"; do
-		filename=$(basename ${url})
-
-		msg_debug "Downloading $filename from $url"
-		smart_download "$url" "$DESTINATION_PATH/$filename"
-	done
+#######################################
+# Install the specified tar file.
+# Globals:
+#   None
+# Arguments:
+#   file path
+# Returns:
+#   None
+#######################################
+sam::processor::tar::install() {
+    local file=${1:-}
+    sam::core::logger::info "Installing $file"
+    echo "TODO"
+    exit 1
 }
-
-# @see https://wiki.archlinux.org/index.php/Fonts#Manual_installation
-font_reset_cache() {
-	fc-cache -f -v
-	mkfontscale ${DESTINATION_PATH}
-	mkfontdir ${DESTINATION_PATH}
-}
-
-# https://github.com/powerline/fonts
-# executar o ./install.sh
-
-# https://powerline.readthedocs.io/en/latest/installation/linux.html#fonts-installation
-# ~/.config/fontconfig/conf.d/
-
-#font_download
-#font_reset_cache
-#sam::core::logger::info "Done. Restart the programs."
 
 # Source: ./core/artifact.sh
 #
@@ -419,6 +428,7 @@ sam::core::artifact::handle() {
 
     if sam::core::archive::can_extract "${artifact_path}"; then
         sam::core::archive::extract "${artifact_path}" "${tmp_destination}"
+        # TODO move to /usr/local/bin?
         rm "${artifact_path}"
     elif [[ "${extension}" == 'deb' ]]; then
         sam::processor::dpkg::install "${artifact_path}"
@@ -434,7 +444,6 @@ sam::core::artifact::handle() {
 
     # the artifact was handled and now the local version is equal to upstream version
     sam::core::database::set_local_version ${SAN_CURRENT_ARTIFACT['UPSTREAM_VERSION']}
-
     sam::core::database::save
 }
 
@@ -467,6 +476,7 @@ sam::provider::github_release::get_latest() {
 
     link=$(sam::provider::github_release::asset_url ${namespace} ${id} ${regex})
 
+    sam::core::logger::info "Downloading $link"
     sam::core::artifact::download "${link}"
 }
 export -f sam::provider::github_release::get_latest
@@ -555,8 +565,7 @@ main() {
         sam::core::database::set_type 'github_release'
 
         if [[ -z "${SAN_PARSED_ARGUMENTS[FILTER]}" ]]; then
-            echo "vazio"
-            exit 1
+            build_filter SAN_PARSED_ARGUMENTS[FILTER]
         fi
 
         sam::provider::github_release::get_latest "${SAN_PARSED_ARGUMENTS[INSTALL]}" "${SAN_PARSED_ARGUMENTS[FILTER]}"
@@ -564,6 +573,26 @@ main() {
     else
         sam::core::logger::error "The value \"${SAN_PARSED_ARGUMENTS[FROM]}\" is not accepted in the \"from\" statement."
     fi
+}
+
+build_filter() {
+    local -n __result=${1:-}
+
+    arch=$(uname --machine)
+    uses_dpkg=$(dpkg -l 2>/dev/null && echo "yes" || echo "no")
+    uses_rpm=$(rpm -qa 2>/dev/null && echo "yes" || echo "no")
+
+    if [[ "$uses_dpkg" != 'no' ]]; then
+        extension="deb"
+        if [[ $arch == 'x86_64' ]]; then
+            arch='amd64'
+        fi
+    fi
+    if [[ "$uses_rpm" != 'no' ]]; then
+        extension="rpm"
+    fi
+
+    __result="$arch.$extension$"
 }
 
 main "$@"
