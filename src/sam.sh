@@ -12,8 +12,9 @@ SOURCES=(
 ./core/http.sh
 ./core/database.sh
 ./processor/dpkg.sh
-./processor/rpm.sh
 ./processor/font.sh
+./processor/rpm.sh
+./processor/tar.sh
 ./core/artifact.sh
 ./provider/github-release.sh
 ./core/main.sh
