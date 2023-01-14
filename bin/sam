@@ -289,6 +289,26 @@ sam::processor::dpkg::install() {
     sudo dpkg --install "${file}"
 }
 
+# Source: ./processor/rpm.sh
+#
+# rpm processor
+#
+
+#######################################
+# Install the specified rpm file.
+# Globals:
+#   None
+# Arguments:
+#   file path
+# Returns:
+#   None
+#######################################
+sam::processor::rpm::install() {
+    local file=${1:-}
+    sam::core::logger::info "Installing $file"
+    sudo rpm --install "${file}"
+}
+
 # Source: ./processor/font.sh
 #
 # Process fonts.
@@ -403,6 +423,9 @@ sam::core::artifact::handle() {
     elif [[ "${extension}" == 'deb' ]]; then
         sam::processor::dpkg::install "${artifact_path}"
         rm "${artifact_path}"
+    elif [[ "${extension}" == 'rpm' ]]; then
+        sam::processor::rpm::install "${artifact_path}"
+        rm "${artifact_path}"
     else
         mv "${artifact_path}" "$tmp_destination"
     fi
@@ -498,7 +521,7 @@ main() {
 
     declare -A SAN_PARSED_ARGUMENTS
     SAN_PARSED_ARGUMENTS[INSTALL]=
-    SAN_PARSED_ARGUMENTS[FROM]=
+    SAN_PARSED_ARGUMENTS[FROM]='github-release'
     SAN_PARSED_ARGUMENTS[FILTER]=
     SAN_PARSED_ARGUMENTS[AS]=
 
@@ -531,8 +554,15 @@ main() {
         sam::core::database::set_name "${SAN_PARSED_ARGUMENTS[INSTALL]}"
         sam::core::database::set_type 'github_release'
 
+        if [[ -z "${SAN_PARSED_ARGUMENTS[FILTER]}" ]]; then
+            echo "vazio"
+            exit 1
+        fi
+
         sam::provider::github_release::get_latest "${SAN_PARSED_ARGUMENTS[INSTALL]}" "${SAN_PARSED_ARGUMENTS[FILTER]}"
         sam::core::artifact::handle
+    else
+        sam::core::logger::error "The value \"${SAN_PARSED_ARGUMENTS[FROM]}\" is not accepted in the \"from\" statement."
     fi
 }
 
