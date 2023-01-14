@@ -13,8 +13,6 @@ SOURCES=(
 ./core/database.sh
 ./processor/dpkg.sh
 ./processor/font.sh
-./processor/rpm.sh
-./processor/tar.sh
 ./core/artifact.sh
 ./provider/github-release.sh
 ./core/main.sh
@@ -40,7 +38,5 @@ else
 
     echo 'main "$@"' >> ${BIN_FILE}
     chmod +x ${BIN_FILE}
-
-    sam::core::logger::info "Done"
     exit 0
 fi

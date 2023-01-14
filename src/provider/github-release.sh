@@ -26,7 +26,6 @@ sam::provider::github_release::get_latest() {
 
     link=$(sam::provider::github_release::asset_url ${namespace} ${id} ${regex})
 
-    sam::core::logger::info "Downloading $link"
     sam::core::artifact::download "${link}"
 }
 export -f sam::provider::github_release::get_latest
