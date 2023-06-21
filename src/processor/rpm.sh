@@ -14,5 +14,5 @@
 sam::processor::rpm::install() {
     local file=${1:-}
     sam::core::logger::info "Installing $file"
-    sudo rpm --install "${file}"
+    sudo rpm --install --force "${file}"
 }
